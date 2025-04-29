@@ -1,9 +1,10 @@
 version: "3.8"
 
+# Сети для связи между сервисами
 networks:
   proxy:
     name: proxy
-    external: true
+    external: true # Сеть proxy должна быть создана заранее: docker network create proxy
   internal:
     name: internal
     external: false
@@ -13,48 +14,48 @@ services:
     image: traefik:v3.3
     container_name: traefik
     command:
-      - "--api.insecure=false" # Disable Traefik dashboard
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=proxy"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--api.insecure=false" # Отключаем дашборд Traefik
+      - "--providers.docker=true" # Используем Docker для автоконфигурации
+      - "--providers.docker.exposedbydefault=false" # Не открываем сервисы по умолчанию
+      - "--providers.docker.network=proxy" # Используем сеть proxy
+      - "--entrypoints.web.address=:80" # HTTP порт
+      - "--entrypoints.websecure.address=:443" # HTTPS порт
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true" # Включаем Let's Encrypt
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=elmir_kuba@vk.com" # Replace with your email
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.email=your-email@domain.com" # Укажи свой email
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json" # Где хранить сертификаты
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:80" # Открываем порт 80 для HTTP
+      - "443:443" # Открываем порт 443 для HTTPS
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro" # Для связи с Docker
+      - "./letsencrypt:/letsencrypt" # Папка для сертификатов
     labels:
-      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)" # Перехват всех HTTP-запросов
       - "traefik.http.routers.http-catchall.entrypoints=web"
       - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https" # Редирект на HTTPS
     networks:
       - proxy
-    restart: unless-stopped
+    restart: unless-stopped # Перезапуск при сбоях
 
   3x-ui:
     image: ghcr.io/mhsanaei/3x-ui:latest
     container_name: 3x-ui
     hostname: aeza.elmir-kuba.ru
     volumes:
-      - "./3x-ui/db:/etc/x-ui"
-      - "/etc/letsencrypt:/etc/letsencrypt:ro"
+      - "./3x-ui/db:/etc/x-ui" # Папка для базы данных 3x-ui
+      - "/etc/letsencrypt:/etc/letsencrypt:ro" # Доступ к сертификатам
     environment:
-      - XRAY_VMESS_AEAD_FORCED=false
+      - XRAY_VMESS_AEAD_FORCED=false # Отключаем принудительное AEAD
     tty: true
     networks:
       - proxy
       - internal
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.3x-ui.rule=Host(`aeza.elmir-kuba.ru`)"
-      - "traefik.http.routers.3x-ui.entrypoints=websecure"
-      - "traefik.http.routers.3x-ui.tls.certresolver=letsencrypt"
-      - "traefik.http.services.3x-ui.loadbalancer.server.port=2053"
-    restart: unless-stopped
+      - "traefik.enable=true" # Включаем Traefik для этого сервиса
+      - "traefik.http.routers.3x-ui.rule=Host(`aeza.elmir-kuba.ru`)" # Домен для 3x-ui
+      - "traefik.http.routers.3x-ui.entrypoints=websecure" # Используем HTTPS
+      - "traefik.http.routers.3x-ui.tls.certresolver=letsencrypt" # Автоматический SSL
+      - "traefik.http.services.3x-ui.loadbalancer.server.port=2053" # Порт панели 3x-ui
+    restart: unless-stopped # Перезапуск при сбоях
