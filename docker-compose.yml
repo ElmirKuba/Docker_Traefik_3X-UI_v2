@@ -4,7 +4,7 @@ version: "3.8"
 networks:
   proxy:
     name: proxy
-    external: true # Сеть proxy должна быть создана заранее: docker network create proxy
+    external: true # Сеть proxy должна быть создана: docker network create proxy
   internal:
     name: internal
     external: false
@@ -38,6 +38,11 @@ services:
     networks:
       - proxy
     restart: unless-stopped # Перезапуск при сбоях
+    # Исправляем права для acme.json
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - "touch /letsencrypt/acme.json && chmod 600 /letsencrypt/acme.json && traefik"
 
   3x-ui:
     image: ghcr.io/mhsanaei/3x-ui:latest
