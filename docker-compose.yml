@@ -14,6 +14,7 @@ services:
     image: traefik:v3.3
     container_name: traefik
     command:
+      - "--log.level=DEBUG" # Включаем отладочные логи для диагностики
       - "--api.insecure=false" # Отключаем дашборд Traefik
       - "--providers.docker=true" # Используем Docker для автоконфигурации
       - "--providers.docker.exposedbydefault=false" # Не открываем сервисы по умолчанию
