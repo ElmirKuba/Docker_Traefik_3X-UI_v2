@@ -9,6 +9,11 @@ networks:
     name: internal
     external: false
 
+# Локальные volume'ы для автоматического создания файлов
+volumes:
+  letsencrypt: # Для сертификатов Traefik
+  x-ui-db: # Для базы данных 3x-ui
+
 services:
   traefik:
     image: traefik:v3.3
@@ -30,7 +35,7 @@ services:
       - "443:443" # Открываем порт 443 для HTTPS
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro" # Для связи с Docker
-      - "./letsencrypt:/letsencrypt" # Папка для сертификатов
+      - "letsencrypt:/letsencrypt" # Volume для сертификатов
     labels:
       - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)" # Перехват всех HTTP-запросов
       - "traefik.http.routers.http-catchall.entrypoints=web"
@@ -50,8 +55,8 @@ services:
     container_name: 3x-ui
     hostname: aeza.elmir-kuba.ru
     volumes:
-      - "./3x-ui/db:/etc/x-ui" # Папка для базы данных 3x-ui
-      - "/etc/letsencrypt:/etc/letsencrypt:ro" # Доступ к сертификатам
+      - "x-ui-db:/etc/x-ui" # Volume для базы данных 3x-ui
+      - "letsencrypt:/etc/letsencrypt:ro" # Доступ к сертификатам
     environment:
       - XRAY_VMESS_AEAD_FORCED=false # Отключаем принудительное AEAD
     tty: true
