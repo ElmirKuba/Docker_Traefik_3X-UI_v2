@@ -1,0 +1,67 @@
+version: "3.8"
+
+networks:
+  proxy:
+    name: proxy
+    external: true
+  internal:
+    name: internal
+    external: false
+
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencrypt.acme.email=elmir_kuba@vk.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt:/letsencrypt"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.aeza.elmir-kuba.ru`)"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=admin:$2y$05$/x10KYbrHtswyR8POT.ny.H4fFd1n.0.IEiYiestWzE1QFkYIEI3m"
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    networks:
+      - proxy
+    restart: unless-stopped
+
+  3x-ui:
+    image: ghcr.io/mhsanaei/3x-ui:latest
+    container_name: 3x-ui
+    hostname: aeza.elmir-kuba.ru
+    volumes:
+      - "./3x-ui/db:/etc/x-ui"
+      - "/etc/letsencrypt:/etc/letsencrypt:ro"
+    environment:
+      - XRAY_VMESS_AEAD_FORCED=false
+    tty: true
+    networks:
+      - proxy
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.3x-ui.rule=Host(`aeza.elmir-kuba.ru`)"
+      - "traefik.http.routers.3x-ui.entrypoints=websecure"
+      - "traefik.http.routers.3x-ui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.3x-ui.loadbalancer.server.port=2053"
+    restart: unless-stopped
