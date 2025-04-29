@@ -28,7 +28,7 @@ services:
       - "--entrypoints.websecure.address=:443" # HTTPS порт
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true" # Включаем Let's Encrypt
       - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-      - "--certificatesresolvers.letsencrypt.acme.email=your-email@domain.com" # Укажи свой email
+      - "--certificatesresolvers.letsencrypt.acme.email=elmir_kuba@vk.com" # Укажи свой email
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json" # Где хранить сертификаты
     ports:
       - "80:80" # Открываем порт 80 для HTTP
